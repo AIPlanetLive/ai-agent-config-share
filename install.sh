@@ -11,9 +11,9 @@
 #   <repo>/claude/CLAUDE.md → merge into ~/.claude/CLAUDE.md
 #   <repo>/codex/AGENTS.md  → merge into ~/.codex/AGENTS.md
 #
-# Symlink policy: if a target path already exists (file, dir, or symlink),
-# skip it and print a notice. Never overwrite — user must clean up
-# conflicts manually.
+# Symlink policy: if a target path already exists (file, dir, or symlink
+# pointing elsewhere), prompt the user whether to overwrite it. In a
+# non-interactive shell the prompt defaults to skip (preserve existing).
 
 set -euo pipefail
 
@@ -27,8 +27,34 @@ if [ ! -d "$SRC_ROOT" ]; then
 fi
 
 installed=0
+overwritten=0
 skipped=0
 already_linked=0
+
+prompt_overwrite() {
+    # Ask the user whether to replace an existing target with our symlink.
+    # Returns 0 (yes) or 1 (no / no tty). Silent — caller prints messaging.
+    #
+    # Reads from /dev/tty directly because the caller runs inside a
+    # `while read; done < <(find ...)` loop, where stdin is the find pipe,
+    # not the terminal. /dev/tty bypasses that.
+    if [ ! -e /dev/tty ] || [ ! -r /dev/tty ]; then
+        return 1
+    fi
+
+    local dst="$1"
+    local detail="$2"
+    {
+        echo "  [CONFLICT] $dst already exists ($detail)"
+        printf "  Replace with symlink to share version? [y/N] "
+    } >/dev/tty
+    local answer=""
+    read -r answer </dev/tty
+    case "$answer" in
+        y|Y|yes|YES) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
 link_one() {
     local src="$1"
@@ -50,14 +76,28 @@ link_one() {
             already_linked=$((already_linked + 1))
             return
         fi
-        echo "  [SKIP — symlink points elsewhere] $dst -> $current"
-        skipped=$((skipped + 1))
+        if prompt_overwrite "$dst" "symlink -> $current"; then
+            rm "$dst"
+            ln -s "$src" "$dst"
+            echo "  [overwritten] $dst"
+            overwritten=$((overwritten + 1))
+        else
+            echo "  [SKIP — kept existing symlink] $dst -> $current"
+            skipped=$((skipped + 1))
+        fi
         return
     fi
 
     if [ -e "$dst" ]; then
-        echo "  [SKIP — file exists, not a symlink] $dst"
-        skipped=$((skipped + 1))
+        if prompt_overwrite "$dst" "regular file"; then
+            rm "$dst"
+            ln -s "$src" "$dst"
+            echo "  [overwritten] $dst"
+            overwritten=$((overwritten + 1))
+        else
+            echo "  [SKIP — kept existing file] $dst"
+            skipped=$((skipped + 1))
+        fi
         return
     fi
 
@@ -92,13 +132,12 @@ link_tree "commands/custom"
 link_tree "references"
 
 echo
-echo "Symlink install done. installed=$installed  already_linked=$already_linked  skipped=$skipped"
+echo "Symlink install done. installed=$installed  overwritten=$overwritten  already_linked=$already_linked  skipped=$skipped"
 
 if [ "$skipped" -gt 0 ]; then
     echo
-    echo "Some files were skipped because the target path is occupied."
-    echo "Inspect the [SKIP ...] lines above. To install those, remove the"
-    echo "conflicting file/symlink and re-run this script."
+    echo "Some targets were left as-is. Re-run this script and choose 'y' at"
+    echo "the prompt if you want to overwrite them with the share version."
 fi
 
 # ---------------------------------------------------------------

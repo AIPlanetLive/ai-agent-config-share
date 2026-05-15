@@ -1,6 +1,6 @@
 # ai-agent-config-share
 
-一份可分享的 Claude Code commands + references 子集，主要用于 spec / plan / skill 工作流。
+Claude Code 和 Codex CLI 的共享 agent 配置，包括 slash commands、行为指引、agent 定义和浏览器自动化 skill。安装脚本自动处理 symlink 和配置合并。
 
 ## 文档导航
 
@@ -8,14 +8,13 @@
 |---|---|
 | 为什么这套命令长成这个样子 | [docs/philosophy.md](docs/philosophy.md) |
 | 有哪些命令、什么场景用、怎么组合 | [docs/command-guide.md](docs/command-guide.md) |
-| 目录结构 | `claude/commands/custom/`（9 个 slash commands）<br>`claude/references/`（被 commands 引用的原则 / 模式 / 协议）<br>`claude/CLAUDE.md` + `codex/AGENTS.md`（Claude Code / Codex CLI 通用行为指引，安装时自动合并）<br>`codex/config.toml`（Codex CLI 通用配置：MCP servers、agents、profiles）<br>`codex/agents/`（3 个 Codex agent 定义：explorer / reviewer / docs-researcher）<br>`claude/skills/agent-browser/`（浏览器自动化 skill，同时安装到 Claude Code 和 Codex） |
 
 ## 安装
 
 1. **克隆到稳定路径**（installer 用 symlink 指向仓库内文件，仓库不能移动 / 删除）：
 
 ```sh
-git clone git@github.com:Picnic-PGC/dongs-agent-config.git .
+git clone git@github.com:Picnic-PGC/dongs-agent-config.git
 ```
 
 2. **复制下面的 prompt 粘贴到 Claude Code 执行**（会运行 install.sh 安装 symlink、agent 定义和 MCP server 依赖，然后合并配置文件）：

@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
-# install.sh — symlink shared commands/references into user-scope dirs,
-# and print manual-merge instructions for top-level config files.
+# install.sh — install shared AI agent configs into user-scope dirs.
 #
-# Auto-symlinked (safe to share verbatim):
-#   <repo>/claude/commands/custom/*.md → ~/.claude/commands/custom/*.md
-#   <repo>/claude/references/*.md      → ~/.claude/references/*.md
+# Auto-installed (safe to share verbatim):
+#   Symlinks:
+#     <repo>/claude/commands/custom/*.md → ~/.claude/commands/custom/*.md
+#     <repo>/claude/references/*.md      → ~/.claude/references/*.md
+#     <repo>/codex/agents/*.toml         → ~/.codex/agents/*.toml
+#   npm global packages:
+#     MCP server CLI tools referenced by codex/config.toml
 #
-# Manual merge required (you likely already have your own version of
-# these and a hard symlink would overwrite your customizations):
-#   <repo>/claude/CLAUDE.md → merge into ~/.claude/CLAUDE.md
-#   <repo>/codex/AGENTS.md  → merge into ~/.codex/AGENTS.md
+# Manual merge required (preserves existing customizations):
+#   <repo>/claude/CLAUDE.md  → merge into ~/.claude/CLAUDE.md
+#   <repo>/codex/AGENTS.md   → merge into ~/.codex/AGENTS.md
+#   <repo>/codex/config.toml → merge into ~/.codex/config.toml
 #
 # Symlink policy: if a target path already exists (file, dir, or symlink
 # pointing elsewhere), prompt the user whether to overwrite it. In a
@@ -125,11 +128,59 @@ link_tree() {
 }
 
 echo "ai-agent-config-share installer"
-echo "  source: $SRC_ROOT"
-echo "  target: $DST_ROOT"
+echo "  source: $SCRIPT_DIR"
+echo "  target: $HOME"
 
 link_tree "commands/custom"
 link_tree "references"
+
+# --- Codex agent definitions (symlink .toml files) ---
+
+CODEX_AGENTS_SRC="$SCRIPT_DIR/codex/agents"
+CODEX_AGENTS_DST="$HOME/.codex/agents"
+
+if [ -d "$CODEX_AGENTS_SRC" ]; then
+    echo
+    echo "Installing codex agents:"
+    while IFS= read -r -d '' src_file; do
+        rel="${src_file#"$CODEX_AGENTS_SRC"/}"
+        link_one "$src_file" "$CODEX_AGENTS_DST/$rel"
+    done < <(find "$CODEX_AGENTS_SRC" -type f -name '*.toml' -print0)
+fi
+
+# --- MCP server CLI tools (npm global packages) ---
+
+NPM_GLOBAL_LIST="$(npm list -g --depth=0 2>/dev/null || true)"
+
+ensure_npm_global() {
+    local pkg="$1"
+    local name
+    # Extract package name (strip trailing @version)
+    if [[ "$pkg" == @*/* ]]; then
+        name="$(echo "$pkg" | sed 's/@[^/]*$//')"
+    else
+        name="${pkg%%@*}"
+    fi
+    if echo "$NPM_GLOBAL_LIST" | grep -q "$name"; then
+        echo "  [already installed] $name"
+        return
+    fi
+    echo "  Installing $pkg..."
+    npm install -g "$pkg"
+}
+
+echo
+echo "Installing MCP server CLI tools:"
+ensure_npm_global "@modelcontextprotocol/server-github"
+ensure_npm_global "@modelcontextprotocol/server-memory"
+ensure_npm_global "@modelcontextprotocol/server-sequential-thinking"
+ensure_npm_global "@upstash/context7-mcp"
+
+if [ -z "${GITHUB_PERSONAL_ACCESS_TOKEN:-}" ]; then
+    echo
+    echo "NOTE: GITHUB_PERSONAL_ACCESS_TOKEN is not set."
+    echo "The GitHub MCP server will not work until you set this env var."
+fi
 
 echo
 echo "Symlink install done. installed=$installed  overwritten=$overwritten  already_linked=$already_linked  skipped=$skipped"
@@ -154,35 +205,11 @@ AGENTS_MD_SRC="$SCRIPT_DIR/codex/AGENTS.md"
 cat <<EOF
 
 ================================================================
-One more step: merge top-level config via Claude Code
+Next step: merge top-level config
 ================================================================
 
-CLAUDE.md and AGENTS.md were NOT auto-symlinked — that would
-overwrite your existing customizations. Paste the prompt below into
-Claude Code (in any directory) to merge them safely:
-
------ COPY FROM HERE -----
-Please merge two source files into my user-scope Claude Code and
-Codex config WITHOUT overwriting my existing customizations.
-
-Sources:
-  $CLAUDE_MD_SRC  -> ~/.claude/CLAUDE.md
-  $AGENTS_MD_SRC   -> ~/.codex/AGENTS.md
-
-Steps:
-1. Read both source files and both target files. If a target file
-   does not exist, create it with the source content and stop.
-2. For each source, identify top-level / sub-section headings
-   present in the source but absent in the target. Append those
-   sections to the target under their original headings, preserving
-   the source's formatting and any reference paths
-   (e.g., '~/.claude/references/...').
-3. If a source heading already exists in the target with different
-   content, do NOT overwrite. Stop and show me the diff for that
-   section, then ask whether to keep mine, replace with source, or
-   merge.
-4. When done, print a summary: which sections were appended to which
-   file, and which sections (if any) were flagged for my review.
------ COPY UNTIL HERE -----
+CLAUDE.md, AGENTS.md, and config.toml were NOT auto-symlinked —
+that would overwrite your existing customizations. The README has a
+one-shot prompt you can paste into Claude Code to merge them safely.
 
 EOF

@@ -1,0 +1,123 @@
+# ── Core behavior ──
+
+approval_policy = "never"            # "never" = auto-approve; "on-request" = ask each time
+sandbox_mode = "danger-full-access"  # full FS access; safer: "workspace-write", "read-only"
+project_doc_fallback_filenames = ["CLAUDE.md"]
+show_raw_agent_reasoning = true
+web_search = "cached"                # "cached" for speed, "live" for freshness
+suppress_unstable_features_warning = true
+steer_enabled = true
+
+persistent_instructions = "Follow project AGENTS.md guidelines. Use available MCP servers when they can help."
+
+# ── Model ──
+# Adjust to your plan/subscription. Available reasoning efforts: low | medium | high | xhigh
+model = "gpt-5.5"
+model_reasoning_effort = "xhigh"
+model_supports_reasoning_summaries = true
+plan_mode_reasoning_effort = "high"
+
+# ── Feature flags ──
+
+[features]
+multi_agent = true
+shell_tool = true
+goals = true
+
+# ── Agent orchestration ──
+
+[agents]
+max_threads = 5
+max_depth = 1
+
+[agents.explorer]
+description = "Read-only codebase explorer for gathering evidence before changes are proposed."
+config_file = "agents/explorer.toml"
+
+[agents.reviewer]
+description = "PR reviewer focused on correctness, security, and missing tests."
+config_file = "agents/reviewer.toml"
+
+[agents.docs_researcher]
+description = "Documentation specialist that verifies APIs, framework behavior, and release notes."
+config_file = "agents/docs-researcher.toml"
+
+# ── TUI ──
+
+[tui]
+notifications = true
+notification_method = "osc9"
+animations = true
+status_line = [
+  "model-with-reasoning", "context-remaining", "current-dir",
+  "five-hour-limit", "weekly-limit", "context-window-size",
+  "used-tokens", "fast-mode",
+]
+
+# ── MCP servers ──
+# Two kinds: URL-based (no install needed) and stdio-based (need `npm install -g <command>`).
+# The install prompt in README will auto-install missing CLI tools and check env vars.
+
+# URL-based — no local install needed
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+
+[mcp_servers.openaiDeveloperDocs.tools.search_openai_docs]
+approval_mode = "approve"
+
+[mcp_servers.openaiDeveloperDocs.tools.fetch_openai_doc]
+approval_mode = "approve"
+
+[mcp_servers.exa]
+url = "https://mcp.exa.ai/mcp"
+
+# stdio-based — requires npm install -g <command>
+
+[mcp_servers.context7]                  # npm install -g context7-mcp
+type = "stdio"
+command = "context7-mcp"
+
+[mcp_servers.github]                    # npm install -g mcp-server-github
+type = "stdio"
+command = "mcp-server-github"
+startup_timeout_sec = 30
+
+[mcp_servers.github.env]
+GITHUB_PERSONAL_ACCESS_TOKEN = "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+
+[mcp_servers.memory]                    # npm install -g mcp-server-memory
+type = "stdio"
+command = "mcp-server-memory"
+startup_timeout_sec = 30
+
+[mcp_servers.sequential-thinking]       # npm install -g mcp-server-sequential-thinking
+type = "stdio"
+command = "mcp-server-sequential-thinking"
+description = "Chain-of-thought reasoning"
+
+# ── Profiles (switch with: codex --profile <name>) ──
+
+[profiles.strict]
+approval_policy = "on-request"
+sandbox_mode = "read-only"
+web_search = "cached"
+
+[profiles.yolo]
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+web_search = "live"
+
+# ── Plugins ──
+
+[plugins."browser-use@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true

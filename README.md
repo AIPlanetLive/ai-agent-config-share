@@ -2,16 +2,13 @@
 
 一份可分享的 Claude Code commands + references 子集，主要用于 spec / plan / skill 工作流。
 
-## 内容
+## 文档导航
 
-- `claude/commands/custom/` — 9 个 slash commands（spec / plan / skill 的创建与审查、handoff、UX 模拟测试）
-- `claude/references/` — 被 commands 引用的原则 / 模式 / 协议文档
-- `claude/CLAUDE.md` + `codex/AGENTS.md` — Claude Code / Codex CLI 通用行为指引（安装时会自动合并）
-- `codex/config.toml` — Codex CLI 通用配置（MCP servers、agents、profiles 等）
-- `codex/agents/` — 3 个 Codex agent 定义（explorer / reviewer / docs-researcher）
-- `claude/skills/agent-browser/` — 浏览器自动化 skill（同时安装到 Claude Code 和 Codex）
-
-完整 command 列表 + 常见开发阶段的工作流组合 见 [command-guide.md](command-guide.md)。
+| 想知道 | 看这里 |
+|---|---|
+| 为什么这套命令长成这个样子 | [docs/philosophy.md](docs/philosophy.md) |
+| 有哪些命令、什么场景用、怎么组合 | [docs/command-guide.md](docs/command-guide.md) |
+| 目录结构 | `claude/commands/custom/`（9 个 slash commands）<br>`claude/references/`（被 commands 引用的原则 / 模式 / 协议）<br>`claude/CLAUDE.md` + `codex/AGENTS.md`（Claude Code / Codex CLI 通用行为指引，安装时自动合并）<br>`codex/config.toml`（Codex CLI 通用配置：MCP servers、agents、profiles）<br>`codex/agents/`（3 个 Codex agent 定义：explorer / reviewer / docs-researcher）<br>`claude/skills/agent-browser/`（浏览器自动化 skill，同时安装到 Claude Code 和 Codex） |
 
 ## 安装
 
@@ -40,5 +37,4 @@ git clone git@github.com:Picnic-PGC/dongs-agent-config.git .
 
 ## 用法
 
-装完后在 Claude Code 中输入 `/custom:` 触发 slash command 选择器。
-
+装完后在 Claude Code 中输入 `/custom:` 触发 slash command 选择器。具体工作流组合见 [docs/command-guide.md](docs/command-guide.md)。
